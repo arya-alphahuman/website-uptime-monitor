@@ -1,0 +1,43 @@
+name: Uptime check
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub may run it a few minutes late)
+  workflow_dispatch:        # lets you run it manually from the Actions tab
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Restore the up/down state from the previous run
+      - uses: actions/cache/restore@v4
+        with:
+          path: .uptime-state
+          key: uptime-state-${{ github.run_id }}
+          restore-keys: uptime-state-
+
+      - name: Check sites
+        run: bash check.sh
+        env:
+          SITES: ${{ vars.SITES }}
+          # Option A: CallMeBot (one or several people)
+          WA_RECIPIENTS: ${{ secrets.WA_RECIPIENTS }}
+          WA_PHONE: ${{ secrets.WA_PHONE }}
+          WA_APIKEY: ${{ secrets.WA_APIKEY }}
+          # Option B: a WhatsApp group via Whapi.Cloud
+          WHAPI_TOKEN: ${{ secrets.WHAPI_TOKEN }}
+          WHAPI_GROUP_ID: ${{ secrets.WHAPI_GROUP_ID }}
+
+      # Save state for the next run
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .uptime-state
+          key: uptime-state-${{ github.run_id }}
